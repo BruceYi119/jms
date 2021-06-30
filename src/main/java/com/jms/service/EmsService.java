@@ -1,10 +1,11 @@
 package com.jms.service;
 
-import org.springframework.jms.annotation.EnableJms;
-import org.springframework.stereotype.Component;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.stereotype.Service;
 
-@Component
-@EnableJms
+@Service
 public class EmsService {
-	
+
+	private JmsTemplate jmsTemplate;
+
 }
