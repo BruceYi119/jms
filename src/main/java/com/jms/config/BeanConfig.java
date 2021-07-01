@@ -38,8 +38,6 @@ public class BeanConfig {
 		connectionFactory.setReconnAttemptDelay(5000);
 		connectionFactory.setReconnAttemptTimeout(2000);
 
-		System.out.println(connectionFactory.getProperties());
-
 		return connectionFactory;
 	}
 

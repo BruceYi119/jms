@@ -16,4 +16,9 @@ public class JmsConsumer {
 		System.out.println(msg);
 	}
 
+	@JmsListener(destination = "Q.JMS3", containerFactory = "listenerContainerFactory")
+	public void consumer3(Object msg) {
+		System.out.println(msg);
+	}
+
 }
