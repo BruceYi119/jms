@@ -11,11 +11,11 @@ public class JmsProducer {
 
 	public JmsTemplate jmsTemplate;
 
-	public void send(String msg) {
+	public void send(Object msg) {
 		jmsTemplate.convertAndSend(msg);
 	}
 
-	public void send(String desc, String msg) {
+	public void send(String desc, Object msg) {
 		jmsTemplate.convertAndSend(desc, msg);
 	}
 

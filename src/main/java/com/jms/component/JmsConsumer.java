@@ -6,13 +6,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class JmsConsumer {
 
-	@JmsListener(destination = "Q.JMS1")
-	public void consumer1(String msg) {
+	@JmsListener(destination = "Q.JMS1", containerFactory = "listenerContainerFactory")
+	public void consumer1(Object msg) {
 		System.out.println(msg);
 	}
 
-	@JmsListener(destination = "Q.JMS2")
-	public void consumer2(String msg) {
+	@JmsListener(destination = "Q.JMS2", containerFactory = "listenerContainerFactory")
+	public void consumer2(Object msg) {
 		System.out.println(msg);
 	}
 

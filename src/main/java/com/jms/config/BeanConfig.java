@@ -7,7 +7,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jms.annotation.EnableJms;
+import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.support.converter.SimpleMessageConverter;
 
 import com.tibco.tibjms.TibjmsQueueConnectionFactory;
 
@@ -36,11 +38,22 @@ public class BeanConfig {
 		connectionFactory.setReconnAttemptDelay(5000);
 		connectionFactory.setReconnAttemptTimeout(2000);
 
+		System.out.println(connectionFactory.getProperties());
+
 		return connectionFactory;
 	}
 
 	@Bean
-	public JmsTemplate jmsTemplate() throws Exception {
+	public DefaultJmsListenerContainerFactory listenerContainerFactory() {
+		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
+
+		factory.setConnectionFactory(connectionFactory());
+
+		return factory;
+	}
+
+	@Bean
+	public JmsTemplate jmsTemplate() {
 		JmsTemplate jmsTemplate = new JmsTemplate();
 
 		jmsTemplate.setDefaultDestinationName(env.getProperty("ems.send.queue"));
@@ -48,6 +61,11 @@ public class BeanConfig {
 		jmsTemplate.setConnectionFactory(connectionFactory());
 
 		return jmsTemplate;
+	}
+
+	@Bean
+	public SimpleMessageConverter simpleMessageConverter() {
+		return new SimpleMessageConverter();
 	}
 
 }
