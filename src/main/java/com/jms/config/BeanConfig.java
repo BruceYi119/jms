@@ -3,14 +3,10 @@ package com.jms.config;
 import javax.jms.ConnectionFactory;
 import javax.jms.Session;
 
-import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jms.annotation.EnableJms;
-import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
-import org.springframework.jms.config.JmsListenerContainerFactory;
-import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 
 import com.tibco.tibjms.TibjmsQueueConnectionFactory;
@@ -32,22 +28,15 @@ public class BeanConfig {
 		connectionFactory.setUserName(env.getProperty("spring.activemq.user"));
 		connectionFactory.setSSLPassword(env.getProperty("spring.activemq.password"));
 
+		connectionFactory.setConnAttemptCount(3);
+		connectionFactory.setConnAttemptDelay(3000);
+		connectionFactory.setConnAttemptTimeout(2000);
+
+		connectionFactory.setReconnAttemptCount(86400);
+		connectionFactory.setReconnAttemptDelay(5000);
+		connectionFactory.setReconnAttemptTimeout(2000);
+
 		return connectionFactory;
-	}
-
-	@Bean
-	public JmsListenerContainerFactory<?> jmsFactory(ConnectionFactory connectionFactory,
-			DefaultJmsListenerContainerFactoryConfigurer configurer) {
-		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
-
-		configurer.configure(factory, connectionFactory);
-
-		return factory;
-	}
-
-	@Bean
-	public CachingConnectionFactory cachingConnectionFactory() {
-		return new CachingConnectionFactory(connectionFactory());
 	}
 
 	@Bean
