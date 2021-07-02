@@ -62,6 +62,10 @@
 			<artifactId>spring-boot-starter-undertow</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>ems</groupId>
 			<artifactId>tibjms</artifactId>
 			<version>1.0.0</version>
