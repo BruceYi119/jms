@@ -19,11 +19,11 @@ public class InitHandler extends ChannelInitializer<SocketChannel> {
 	}
 
 	@Override
-	protected void initChannel(SocketChannel ch) throws Exception {
-		ChannelPipeline pipe = ch.pipeline();
+	protected void initChannel(SocketChannel sc) throws Exception {
+		ChannelPipeline pipe = sc.pipeline();
 
-		for (ChannelHandler h : hansdlers)
-			pipe.addLast(h);
+		for (ChannelHandler handler : hansdlers)
+			pipe.addLast(handler);
 	}
 
 }

@@ -1,13 +1,9 @@
-package com.jms.service;
+package com.jms.ems;
 
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
-
-import com.jms.component.JmsConsumer;
-import com.jms.component.JmsProducer;
-import com.jms.component.MsgConverter;
 
 import lombok.AllArgsConstructor;
 

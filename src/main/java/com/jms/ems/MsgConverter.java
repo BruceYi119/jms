@@ -1,4 +1,4 @@
-package com.jms.component;
+package com.jms.ems;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
