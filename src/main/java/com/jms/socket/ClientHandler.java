@@ -14,11 +14,6 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	public static final Logger log = LoggerFactory.getLogger(ChannelInboundHandlerAdapter.class);
 
 	@Override
-	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-		super.channelRegistered(ctx);
-	}
-
-	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		ctx.channel().pipeline().addLast(new ReadTimeoutHandler(30));
 		ctx.channel().pipeline().addLast(new WriteTimeoutHandler(30));
@@ -27,17 +22,13 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		ByteBuf b = (ByteBuf) msg;
-		b.release();
+
+		System.out.println(b.readableBytes());
 	}
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		ctx.writeAndFlush(ctx);
-	}
-
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		super.channelInactive(ctx);
+		ctx.flush();
 	}
 
 	@Override

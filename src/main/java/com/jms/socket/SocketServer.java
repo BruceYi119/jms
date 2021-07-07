@@ -50,12 +50,11 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 
 		sb = new ServerBootstrap();
 		sb.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-				.childOption(ChannelOption.TCP_NODELAY, true).handler(new LoggingHandler(LogLevel.INFO))
-				.childHandler(this.handlers);
+				.handler(new LoggingHandler(LogLevel.INFO)).childHandler(this.handlers);
 
 		try {
 			ChannelFuture cf = sb.bind(port).sync();
-			cf.channel().close().sync();
+			cf.channel().closeFuture().sync();
 		} catch (InterruptedException e) {
 			log.error("InterruptedException : ", e);
 		} finally {

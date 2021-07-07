@@ -22,11 +22,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 	private Map<ChannelId, ByteBuf> packetMap = new HashMap<ChannelId, ByteBuf>();
 
 	@Override
-	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-		super.channelRegistered(ctx);
-	}
-
-	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		ctx.channel().pipeline().addLast(new ReadTimeoutHandler(30));
 		ctx.channel().pipeline().addLast(new WriteTimeoutHandler(30));
@@ -35,14 +30,21 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-		if (packetMap.get(ctx.channel().id()) == null)
-			packetMap.put(ctx.channel().id(), ctx.alloc().buffer());
-
 		ByteBuf now = packetMap.get(ctx.channel().id());
 		ByteBuf b = (ByteBuf) msg;
 
+		System.out.println(packetMap.get(ctx.channel().id()).readableBytes());
+
 		packetMap.get(ctx.channel().id()).writeBytes(b);
+		System.out.println(String.format("b.refCnt() : %d", b.refCnt()));
+		while (b.isReadable()) {
+			System.out.print("server : ");
+			System.out.println((char) b.readByte());
+			System.out.flush();
+		}
 		b.release();
+		System.out.println(String.format("b.refCnt() : %d", b.refCnt()));
+		System.out.println(String.format("now.readableBytes() : %d", now.readableBytes()));
 
 		if (now.readableBytes() >= 50) {
 			ByteBuf readbuf = now.readBytes(50);
@@ -60,17 +62,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		ctx.writeAndFlush(ctx);
-	}
-
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-
-	}
-
-	@Override
-	public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-		super.channelUnregistered(ctx);
+		ctx.flush();
 	}
 
 	@Override
