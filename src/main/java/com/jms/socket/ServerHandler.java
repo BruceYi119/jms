@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
@@ -33,18 +34,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		ByteBuf now = packetMap.get(ctx.channel().id());
 		ByteBuf b = (ByteBuf) msg;
 
-		System.out.println(packetMap.get(ctx.channel().id()).readableBytes());
-
-		packetMap.get(ctx.channel().id()).writeBytes(b);
-		System.out.println(String.format("b.refCnt() : %d", b.refCnt()));
-		while (b.isReadable()) {
-			System.out.print("server : ");
-			System.out.println((char) b.readByte());
-			System.out.flush();
-		}
+		now.writeBytes(b);
 		b.release();
-		System.out.println(String.format("b.refCnt() : %d", b.refCnt()));
-		System.out.println(String.format("now.readableBytes() : %d", now.readableBytes()));
 
 		if (now.readableBytes() >= 50) {
 			ByteBuf readbuf = now.readBytes(50);
@@ -55,13 +46,19 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				i++;
 			}
 
+			System.out.println(bb.length);
 			System.out.println(new String(bb));
 			System.out.flush();
+
+			ByteBuf wb = Unpooled.buffer();
+			wb.writeBytes(bb);
+			ctx.writeAndFlush(wb);
 		}
 	}
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+		System.out.println("channelReadComplete");
 		ctx.flush();
 	}
 
