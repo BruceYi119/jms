@@ -40,7 +40,7 @@ public class SocketClient {
 		group = new NioEventLoopGroup();
 
 		b.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
-				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000).handler(handlers);
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000).handler(this.handlers);
 
 		try {
 			ChannelFuture cf = b.connect(host, port).sync();

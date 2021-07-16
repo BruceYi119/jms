@@ -35,7 +35,7 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 	public SocketServer(Environment env) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
 
-		handlers.add(new ServerHandler());
+		handlers.add(new ServerHandler(env));
 
 		this.env = env;
 		this.handlers = new InitHandler(handlers);
