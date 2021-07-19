@@ -57,8 +57,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		ctx.channel().pipeline().addLast(new ReadTimeoutHandler(300));
-		ctx.channel().pipeline().addLast(new WriteTimeoutHandler(300));
+		ctx.channel().pipeline().addLast(new ReadTimeoutHandler(30));
+		ctx.channel().pipeline().addLast(new WriteTimeoutHandler(30));
 
 		initModel(ctx);
 	}
@@ -80,11 +80,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+		System.out.println("channelReadComplete");
 		ctx.flush();
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		System.out.println("channelInactive");
 		clearModel(ctx);
 
 		ctx.close();
@@ -92,6 +94,18 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+		System.out.println("exceptionCaught");
+		SocketModel model = models.get(ctx.channel().id());
+
+		model.getSb().setLength(0);
+
+		// 에러
+		model.getSb().append("W 0000000000");
+
+		ByteBuf upBuf = Unpooled.buffer();
+		upBuf.writeBytes(model.getSb().toString().getBytes());
+		ctx.writeAndFlush(upBuf);
+
 		clearModel(ctx);
 
 		log.error("Exception : ", cause);
@@ -105,15 +119,27 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 		model.getSb().setLength(0);
 
-		if (packet.readableBytes() >= 35) {
-			switch ((char) packet.readByte()) {
+		System.out.println(model);
+
+		// 해더 5byte만 확인
+		while (packet.readableBytes() >= 5 && !model.isRecvHeaderRead()) {
+			// 전문타입 1
+			model.setRecvType((char) packet.readByte());
+			// 전문길이 4
+			byte[] recvSizeBytes = new byte[4];
+
+			packet.readBytes(recvSizeBytes, 0, recvSizeBytes.length);
+
+			int recvSize = Integer.parseInt(new String(recvSizeBytes));
+
+			model.setMsgSize(recvSize);
+			model.setRecvHeaderRead(true);
+		}
+
+		while (packet.readableBytes() >= (model.getMsgSize() - 5)) {
+			switch (model.getRecvType()) {
 			// 개시 전문
 			case 'I':
-				// 전문길이 4
-				byte[] teleSize = new byte[4];
-				packet.readBytes(teleSize, 0, teleSize.length);
-				model.setTeleSize(Integer.parseInt(new String(teleSize)));
-
 				// 파일명 20
 				byte[] fileNm = new byte[20];
 				packet.readBytes(fileNm, 0, fileNm.length);
@@ -123,55 +149,86 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				byte[] fileSize = new byte[10];
 				packet.readBytes(fileSize, 0, fileSize.length);
 				model.setFileSize(Integer.parseInt(new String(fileSize)));
-				model.setData(new byte[model.getFileSize()]);
 
 				// 파일 확장자
 				model.setFileExt(model.getFileNm().substring(model.getFileNm().lastIndexOf(".") + 1));
 
 				model.setFile(new File(model.getPath().toString(), model.getFileNm()));
 
-				// 전문타입 1 R : 송신요청/S : 송신완료
+				// 전문타입 1 S : 송신요청/E : 수신완료/W : 에러
 				model.getSb().append("S");
 
-				// 송신타입 1 N : 신규/I : 이어받기
+				// 이어받기
 				if (model.getFile().exists()) {
 					try {
 						model.setFos(new FileOutputStream(model.getFile(), true));
+						model.setRecvFileSize((int) model.getFile().length());
 					} catch (FileNotFoundException e) {
 						log.error("FileNotFoundException : ", e);
 					}
-					model.getSb().append("I");
+
+					model.setSendType("I");
+					// 새로받기
 				} else {
 					try {
 						model.setFos(new FileOutputStream(model.getFile()));
 					} catch (FileNotFoundException e) {
 						log.error("FileNotFoundException : ", e);
 					}
-					model.getSb().append("N");
+
+					model.setSendType("N");
 				}
 
 				model.setBos(new BufferedOutputStream(model.getFos()));
-
-				// 받은파일크기 10
-				model.getSb().append(Telegram.numPad(0, 10));
-
+				model.setRecvHeaderRead(false);
+				System.out.println("개시");
 				break;
-			// 마지막 전송
-			case 'L':
+			// 전송완료
+			case 'E':
+				try {
+					model.getBos().flush();
+				} catch (IOException e) {
+					log.error("IOException : ", e);
+				}
+
+				// 수신완료 전문
+				model.getSb().append("E");
+				clearModel(ctx);
+				System.out.println("전송완료");
 				break;
 			// 전송
 			default:
+				model.getPacket().readerIndex(model.getPacket().readerIndex() + 30);
 
+				if (model.getMsgSize() - 35 > 0) {
+					byte[] recvBytes = new byte[model.getMsgSize() - 35];
+
+					packet.readBytes(recvBytes, 0, (model.getMsgSize() - 35));
+
+					try {
+						model.getBos().write(recvBytes);
+					} catch (IOException e) {
+						log.error("IOException : ", e);
+					}
+
+					model.setRecvFileSize(model.getRecvFileSize() + (model.getMsgSize() - 35));
+				}
+
+				// 송신요청 전문
+				model.getSb().append("S");
+				model.setRecvHeaderRead(false);
+				System.out.println("전송");
 				break;
 			}
+
+			// 송신타입 1 N : 신규/I : 이어받기
+			model.getSb().append(model.getSendType());
+			// 받은파일크기 10
+			model.getSb().append(Telegram.numPad(model.getRecvFileSize(), 10));
 
 			ByteBuf upBuf = Unpooled.buffer();
 			upBuf.writeBytes(model.getSb().toString().getBytes());
 			ctx.writeAndFlush(upBuf);
-
-			model.getSb().setLength(0);
-
-			packet.release();
 		}
 	}
 
@@ -180,11 +237,14 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 			SocketModel model = models.get(ctx.channel().id());
 
 			if (model.getPacket() != null) {
+				model.getPacket().readerIndex(model.getPacket().writerIndex());
 				while (model.getPacket().refCnt() > 0)
 					model.getPacket().release();
 			}
 
 			try {
+				if (model.getBos() != null)
+					model.getBos().flush();
 				if (model.getFos() != null)
 					model.getFos().close();
 				if (model.getBos() != null)

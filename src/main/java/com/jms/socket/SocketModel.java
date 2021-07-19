@@ -16,16 +16,22 @@ public class SocketModel {
 
 	// 파일
 	private File file;
+	// 수신타입
+	private char recvType;
+	// 송신타입
+	private String sendType;
+	// 해더 읽음
+	private boolean recvHeaderRead = false;
 	// 파일명
 	private String fileNm;
 	// 전문 사이즈
-	private int teleSize;
+	private int msgSize;
 	// 파일 확장자
 	private String fileExt;
 	// 파일 사이즈
 	private int fileSize;
-	// 받은 파일 파일 데이터
-	private byte[] data;
+	// 받은 파일 사이즈
+	private int recvFileSize;
 	// 파일 dir
 	@NonNull
 	private Path path;

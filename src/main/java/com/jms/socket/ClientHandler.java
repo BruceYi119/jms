@@ -32,6 +32,11 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		ctx.close();
+	}
+
+	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		log.error("exceptionCaught : ", cause);
 		ctx.close();
