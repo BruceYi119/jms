@@ -80,13 +80,11 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		System.out.println("channelReadComplete");
 		ctx.flush();
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		System.out.println("channelInactive");
 		clearModel(ctx);
 
 		ctx.close();
@@ -94,7 +92,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		System.out.println("exceptionCaught");
 		SocketModel model = models.get(ctx.channel().id());
 
 		model.getSb().setLength(0);
@@ -116,10 +113,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 	private void process(ChannelHandlerContext ctx) {
 		SocketModel model = models.get(ctx.channel().id());
 		ByteBuf packet = model.getPacket();
+		String msgType = "S";
 
 		model.getSb().setLength(0);
-
-		System.out.println(model);
 
 		// 해더 5byte만 확인
 		while (packet.readableBytes() >= 5 && !model.isRecvHeaderRead()) {
@@ -152,14 +148,11 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 				// 파일 확장자
 				model.setFileExt(model.getFileNm().substring(model.getFileNm().lastIndexOf(".") + 1));
-
 				model.setFile(new File(model.getPath().toString(), model.getFileNm()));
-
-				// 전문타입 1 S : 송신요청/E : 수신완료/W : 에러
-				model.getSb().append("S");
 
 				// 이어받기
 				if (model.getFile().exists()) {
+					log.info(String.format("ch-%s : 이어받기", ctx.channel().id()));
 					try {
 						model.setFos(new FileOutputStream(model.getFile(), true));
 						model.setRecvFileSize((int) model.getFile().length());
@@ -167,9 +160,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 						log.error("FileNotFoundException : ", e);
 					}
 
+					if (model.getRecvFileSize() >= model.getFileSize())
+						msgType = "E";
+
 					model.setSendType("I");
-					// 새로받기
+				// 새로받기
 				} else {
+					log.info(String.format("ch-%s : 새로받기", ctx.channel().id()));
 					try {
 						model.setFos(new FileOutputStream(model.getFile()));
 					} catch (FileNotFoundException e) {
@@ -181,7 +178,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 				model.setBos(new BufferedOutputStream(model.getFos()));
 				model.setRecvHeaderRead(false);
-				System.out.println("개시");
+				log.info(String.format("ch-%s : 개시", ctx.channel().id()));
 				break;
 			// 전송완료
 			case 'E':
@@ -192,9 +189,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				}
 
 				// 수신완료 전문
-				model.getSb().append("E");
-				clearModel(ctx);
-				System.out.println("전송완료");
+				msgType = "E";
+				log.info(String.format("ch-%s : 수신완료", ctx.channel().id()));
 				break;
 			// 전송
 			default:
@@ -215,12 +211,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				}
 
 				// 송신요청 전문
-				model.getSb().append("S");
 				model.setRecvHeaderRead(false);
-				System.out.println("전송");
+				log.info(String.format("ch-%s : 송신요청", ctx.channel().id()));
 				break;
 			}
 
+			// 전문타입 1 S : 송신요청/E : 수신완료/W : 에러
+			model.getSb().append(msgType);
 			// 송신타입 1 N : 신규/I : 이어받기
 			model.getSb().append(model.getSendType());
 			// 받은파일크기 10
@@ -229,6 +226,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 			ByteBuf upBuf = Unpooled.buffer();
 			upBuf.writeBytes(model.getSb().toString().getBytes());
 			ctx.writeAndFlush(upBuf);
+
+			if (msgType.equals("E"))
+				clearModel(ctx);
 		}
 	}
 
