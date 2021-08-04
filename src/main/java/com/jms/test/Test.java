@@ -1,9 +1,11 @@
 package com.jms.test;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
+import java.util.Date;
 
 public class Test {
 
@@ -11,20 +13,26 @@ public class Test {
 	private static int num;
 
 	public static void main(String[] args) throws IOException {
-		boolean flag = true;
-
-		System.out.println(Test.str);
-		System.out.println(Test.num);
-
-		String txt = "한그입니다아아아!";
-
-		byte[] bt = txt.getBytes();
-
-		File file = new File("D:/download/test.txt");
-		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
-
-		bos.write(bt, 0, 25);
-		bos.close();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		Calendar c1 = Calendar.getInstance();
+		String nowDate = sdf.format(c1.getTime());
+		
+		System.out.println(nowDate);
+		
+//		boolean flag = true;
+//
+//		System.out.println(Test.str);
+//		System.out.println(Test.num);
+//
+//		String txt = "한그입니다아아아!";
+//
+//		byte[] bt = txt.getBytes();
+//
+//		File file = new File("D:/download/test.txt");
+//		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
+//
+//		bos.write(bt, 0, 25);
+//		bos.close();
 //		try {
 //			int readPos = 0;
 //			int readSize = 5;
