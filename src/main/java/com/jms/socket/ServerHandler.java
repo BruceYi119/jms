@@ -164,7 +164,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 						msgType = "E";
 
 					model.setSendType("I");
-				// 새로받기
+					// 새로받기
 				} else {
 					log.info(String.format("ch-%s : 새로받기", ctx.channel().id()));
 					try {
@@ -244,11 +244,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 			try {
 				if (model.getBos() != null)
-					model.getBos().flush();
+					model.getBos().close();
 				if (model.getFos() != null)
 					model.getFos().close();
-				if (model.getBos() != null)
-					model.getBos().close();
 			} catch (IOException e) {
 				log.error("IOException : ", e);
 			}
