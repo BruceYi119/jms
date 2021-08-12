@@ -32,7 +32,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	public static final Logger log = LoggerFactory.getLogger(SocketServer.class);
 
-	private boolean isDir = false;
 	@NonNull
 	private Environment env;
 	private Map<ChannelId, SocketModel> models = new HashMap<ChannelId, SocketModel>();
@@ -42,15 +41,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 		model.setPacket(ctx.alloc().buffer());
 		model.setSb(new StringBuffer());
-		model.setPath(Paths
-				.get(System.getProperty("user.dir") + File.separator + env.getProperty("custom.file.upload.path")));
-
-		if (!isDir) {
-			if (model.getPath().toFile().exists())
-				isDir = true;
-			else
-				model.getPath().toFile().mkdirs();
-		}
+		model.setPath(Paths.get(env.getProperty("custom.file.upload.path")));
 
 		models.put(ctx.channel().id(), model);
 	}

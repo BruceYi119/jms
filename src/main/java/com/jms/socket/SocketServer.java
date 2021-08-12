@@ -1,5 +1,7 @@
 package com.jms.socket;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 import org.slf4j.Logger;
@@ -34,6 +36,11 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 
 	public SocketServer(Environment env) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
+
+		Path path = Paths.get(env.getProperty("custom.file.upload.path"));
+
+		if (!path.toFile().exists())
+			path.toFile().mkdirs();
 
 		handlers.add(new ServerHandler(env));
 
