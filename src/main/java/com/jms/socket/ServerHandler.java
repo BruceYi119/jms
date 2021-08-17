@@ -109,117 +109,122 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		model.getSb().setLength(0);
 
 		// 해더 5byte만 확인
-		while (packet.readableBytes() >= 5 && !model.isRecvHeaderRead()) {
-			// 전문타입 1
-			model.setRecvType((char) packet.readByte());
-			// 전문길이 4
-			byte[] recvSizeBytes = new byte[4];
+		while (packet.readableBytes() >= 5) {
+			if (!model.isRecvHeaderRead()) {
+				// 전문타입 1
+				model.setRecvType((char) packet.readByte());
+				// 전문길이 4
+				byte[] recvSizeBytes = new byte[4];
 
-			packet.readBytes(recvSizeBytes, 0, recvSizeBytes.length);
+				packet.readBytes(recvSizeBytes, 0, recvSizeBytes.length);
 
-			int recvSize = Integer.parseInt(new String(recvSizeBytes));
+				int recvSize = Integer.parseInt(new String(recvSizeBytes));
 
-			model.setMsgSize(recvSize);
-			model.setRecvHeaderRead(true);
-		}
+				model.setMsgSize(recvSize);
+				model.setRecvHeaderRead(true);
+			}
 
-		while (packet.readableBytes() >= (model.getMsgSize() - 5)) {
-			switch (model.getRecvType()) {
-			// 개시 전문
-			case 'I':
-				// 파일명 20
-				byte[] fileNm = new byte[20];
-				packet.readBytes(fileNm, 0, fileNm.length);
-				model.setFileNm(new String(fileNm).trim());
+			if (packet.readableBytes() < (model.getMsgSize() - 5))
+				break;
 
-				// 파일크기 10
-				byte[] fileSize = new byte[10];
-				packet.readBytes(fileSize, 0, fileSize.length);
-				model.setFileSize(Integer.parseInt(new String(fileSize)));
+			if (packet.readableBytes() >= (model.getMsgSize() - 5)) {
+				switch (model.getRecvType()) {
+				// 개시 전문
+				case 'I':
+					// 파일명 20
+					byte[] fileNm = new byte[20];
+					packet.readBytes(fileNm, 0, fileNm.length);
+					model.setFileNm(new String(fileNm).trim());
 
-				// 파일 확장자
-				model.setFileExt(model.getFileNm().substring(model.getFileNm().lastIndexOf(".") + 1));
-				model.setFile(new File(model.getPath().toString(), model.getFileNm()));
+					// 파일크기 10
+					byte[] fileSize = new byte[10];
+					packet.readBytes(fileSize, 0, fileSize.length);
+					model.setFileSize(Integer.parseInt(new String(fileSize)));
 
-				// 이어받기
-				if (model.getFile().exists()) {
-					log.info(String.format("ch-%s : 이어받기", ctx.channel().id()));
-					try {
-						model.setFos(new FileOutputStream(model.getFile(), true));
-						model.setRecvFileSize((int) model.getFile().length());
-					} catch (FileNotFoundException e) {
-						log.error("FileNotFoundException : ", e);
+					// 파일 확장자
+					model.setFileExt(model.getFileNm().substring(model.getFileNm().lastIndexOf(".") + 1));
+					model.setFile(new File(model.getPath().toString(), model.getFileNm()));
+
+					// 이어받기
+					if (model.getFile().exists()) {
+						log.info(String.format("ch-%s : 이어받기", ctx.channel().id()));
+						try {
+							model.setFos(new FileOutputStream(model.getFile(), true));
+							model.setRecvFileSize((int) model.getFile().length());
+						} catch (FileNotFoundException e) {
+							log.error("FileNotFoundException : ", e);
+						}
+
+						if (model.getRecvFileSize() >= model.getFileSize())
+							msgType = "E";
+
+						model.setSendType("I");
+						// 새로받기
+					} else {
+						log.info(String.format("ch-%s : 새로받기", ctx.channel().id()));
+						try {
+							model.setFos(new FileOutputStream(model.getFile()));
+						} catch (FileNotFoundException e) {
+							log.error("FileNotFoundException : ", e);
+						}
+
+						model.setSendType("N");
 					}
 
-					if (model.getRecvFileSize() >= model.getFileSize())
-						msgType = "E";
-
-					model.setSendType("I");
-					// 새로받기
-				} else {
-					log.info(String.format("ch-%s : 새로받기", ctx.channel().id()));
+					model.setBos(new BufferedOutputStream(model.getFos()));
+					model.setRecvHeaderRead(false);
+					log.info(String.format("ch-%s : 개시", ctx.channel().id()));
+					break;
+				// 전송완료
+				case 'E':
 					try {
-						model.setFos(new FileOutputStream(model.getFile()));
-					} catch (FileNotFoundException e) {
-						log.error("FileNotFoundException : ", e);
-					}
-
-					model.setSendType("N");
-				}
-
-				model.setBos(new BufferedOutputStream(model.getFos()));
-				model.setRecvHeaderRead(false);
-				log.info(String.format("ch-%s : 개시", ctx.channel().id()));
-				break;
-			// 전송완료
-			case 'E':
-				try {
-					model.getBos().flush();
-				} catch (IOException e) {
-					log.error("IOException : ", e);
-				}
-
-				// 수신완료 전문
-				msgType = "E";
-				log.info(String.format("ch-%s : 수신완료", ctx.channel().id()));
-				break;
-			// 전송
-			default:
-				model.getPacket().readerIndex(model.getPacket().readerIndex() + 30);
-
-				if (model.getMsgSize() - 35 > 0) {
-					byte[] recvBytes = new byte[model.getMsgSize() - 35];
-
-					packet.readBytes(recvBytes, 0, (model.getMsgSize() - 35));
-
-					try {
-						model.getBos().write(recvBytes);
+						model.getBos().flush();
 					} catch (IOException e) {
 						log.error("IOException : ", e);
 					}
 
-					model.setRecvFileSize(model.getRecvFileSize() + (model.getMsgSize() - 35));
+					// 수신완료 전문
+					msgType = "E";
+					log.info(String.format("ch-%s : 수신완료", ctx.channel().id()));
+					break;
+				// 전송
+				default:
+					model.getPacket().readerIndex(model.getPacket().readerIndex() + 30);
+
+					if (model.getMsgSize() - 35 > 0) {
+						byte[] recvBytes = new byte[model.getMsgSize() - 35];
+
+						packet.readBytes(recvBytes, 0, (model.getMsgSize() - 35));
+
+						try {
+							model.getBos().write(recvBytes);
+						} catch (IOException e) {
+							log.error("IOException : ", e);
+						}
+
+						model.setRecvFileSize(model.getRecvFileSize() + (model.getMsgSize() - 35));
+					}
+
+					// 송신요청 전문
+					model.setRecvHeaderRead(false);
+					log.info(String.format("ch-%s : 송신요청", ctx.channel().id()));
+					break;
 				}
 
-				// 송신요청 전문
-				model.setRecvHeaderRead(false);
-				log.info(String.format("ch-%s : 송신요청", ctx.channel().id()));
-				break;
+				// 전문타입 1 S : 송신요청/E : 수신완료/W : 에러
+				model.getSb().append(msgType);
+				// 송신타입 1 N : 신규/I : 이어받기
+				model.getSb().append(model.getSendType());
+				// 받은파일크기 10
+				model.getSb().append(Telegram.numPad(model.getRecvFileSize(), 10));
+
+				ByteBuf upBuf = Unpooled.buffer();
+				upBuf.writeBytes(model.getSb().toString().getBytes());
+				ctx.writeAndFlush(upBuf);
+
+				if (msgType.equals("E"))
+					clearModel(ctx);
 			}
-
-			// 전문타입 1 S : 송신요청/E : 수신완료/W : 에러
-			model.getSb().append(msgType);
-			// 송신타입 1 N : 신규/I : 이어받기
-			model.getSb().append(model.getSendType());
-			// 받은파일크기 10
-			model.getSb().append(Telegram.numPad(model.getRecvFileSize(), 10));
-
-			ByteBuf upBuf = Unpooled.buffer();
-			upBuf.writeBytes(model.getSb().toString().getBytes());
-			ctx.writeAndFlush(upBuf);
-
-			if (msgType.equals("E"))
-				clearModel(ctx);
 		}
 	}
 
